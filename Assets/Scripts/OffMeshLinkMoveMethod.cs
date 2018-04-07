@@ -4,6 +4,5 @@
         Teleport,
         NormalSpeed,
         Parabola,
-        Rotated
     }
 }

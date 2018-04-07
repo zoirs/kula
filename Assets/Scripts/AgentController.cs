@@ -18,26 +18,14 @@ public class AgentController : MonoBehaviour {
 	private bool _isGo;
 
 	public GravityDirection _gravityDirection = GravityDirection.DOWN;
-	public Camera _camera;
-
 	
 	void Start()
 	{
-
 		_isGo = false;
 		_characterController = gameObject.GetComponent<CharacterController>();
 		_navMeshAgent = gameObject.GetComponent<NavMeshAgent>();
-		NavMeshPath path = new NavMeshPath();
-		GameObject t = GameObject.Find("Target");
-		bool calculatePath = _navMeshAgent.CalculatePath(t.transform.position, path);
-		Debug.Log("==" + path.status + " " + calculatePath);
-		
-		if (path.status != NavMeshPathStatus.PathInvalid)
-		{
-			//_navMeshAgent.SetDestination(t.transform.position);
-		}
-		SwichMoveType(true);
 
+		SwichMoveType(true);
 	}
 	
 	// Update is called once per frame
