@@ -1,255 +1,179 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using Object = UnityEngine.Object;
 
 public class AgentController : MonoBehaviour {
-	Vector3 moveDirection = Vector3.zero;
-	float walkSpeed  = 5.0f;
-	float runSpeed = 10.0f;
-	float gravity =  1.0f;
-	float jumpHeight = 15.0f;
-	private CharacterController _characterController;
-	private NavMeshAgent _navMeshAgent;
-	private const int STEP = 10;
-	
-	private float elapsed = 0.0f;
-	private bool _isGo;
+    Vector3 moveDirection = Vector3.zero;
+    float walkSpeed = 5.0f;
+    float runSpeed = 10.0f;
+    float gravity = 1.0f;
+    float jumpHeight = 15.0f;
+    private CharacterController _characterController;
+    private NavMeshAgent _navMeshAgent;
+    private const int STEP = 10;
+    private bool _jumpPressed = false;
+    private float elapsed = 0.0f;
 
-	public GravityDirection _gravityDirection = GravityDirection.DOWN;
-	
-	void Start()
-	{
-		_isGo = false;
-		_characterController = gameObject.GetComponent<CharacterController>();
-		_navMeshAgent = gameObject.GetComponent<NavMeshAgent>();
+    public GravityDirection _gravityDirection = GravityDirection.DOWN;
 
-		SwichMoveType(true);
-	}
-	
-	// Update is called once per frame
-	void Update ()
-	{
-		
-//		_camera.transform.rotation =_camera.transform.rotation* new Quaternion(0, 0 , 1 , 0.001f );
-//		_camera.transform.position =
+    void Start() {
+        _characterController = gameObject.GetComponent<CharacterController>();
+        _navMeshAgent = gameObject.GetComponent<NavMeshAgent>();
 
-//		Camera.main.transform.rotation =Quaternion.FromToRotation(Vector3.forward, Vector3.back) ;
-		
-		
-		if(Input.GetKey(KeyCode.Space))
-		{
-			
+        SwichMoveType(true);
+    }
 
-			SwichMoveType(false);
-//			_navMeshAgent = gameObject.GetComponent<NavMeshAgent>();
-//			if (_navMeshAgent != null)
-//			{
-//				_navMeshAgent.enabled = false;
-//			}
-//			
-			switch (_gravityDirection)
-			{
-				case GravityDirection.DOWN:
-					moveDirection.y = jumpHeight;
-					break;
-				case GravityDirection.UP:
-					moveDirection.y = -jumpHeight;
-					break;
-				case GravityDirection.LEFT:
-					moveDirection.x = jumpHeight;
-					break;
-				case GravityDirection.RIGHT:
-					moveDirection.x = -jumpHeight;
-					break;
-				default:
-					throw new ArgumentOutOfRangeException();
-			}
-		}
-		NavMeshPath path = new NavMeshPath();
+    void Update() {
+        
+        // двигаемся по плоскости
+        if (_navMeshAgent.enabled && Input.GetKeyDown(KeyCode.RightArrow)) {
+            GameObject surface = ((Component) _navMeshAgent.navMeshOwner).gameObject;
 
-		
+            Vector3 nextForwardCube = FindForwardCube(surface.transform.position);
 
-		if (_navMeshAgent.enabled && Input.GetKeyDown(KeyCode.RightArrow))
-		{
+            // пытаемся перейти на следующий куб
+            if (_navMeshAgent.CalculatePath(nextForwardCube, new NavMeshPath())) {
+                _navMeshAgent.SetDestination(nextForwardCube);
+            } else {
+                // переворачиваемся
+                Vector3 nextSurfaceCurrentCube = FindRightCubeSurface(surface.transform.position);
+                //todo менять направление гравитации в момент когда шарик на линке
+                _gravityDirection = _gravityDirection.Rigth();
 
-			Debug.Log(_navMeshAgent.navMeshOwner.name);
+                if (_navMeshAgent.CalculatePath(nextSurfaceCurrentCube, new NavMeshPath())) {
+                    _navMeshAgent.SetDestination(nextSurfaceCurrentCube);
+                }
+            }
+        }
 
-			UnityEngine.Object owner = _navMeshAgent.navMeshOwner;
-			GameObject surface = ((Component) owner).gameObject;
-			//NavMeshDataInstance.owner(_navMeshAgent.navMeshOwner.name);
-			Vector3 currentSurfacePosition = surface.transform.position;
-			Vector3 dest;
+        // Стартуем прыжок
+        if (_navMeshAgent.enabled && Input.GetKey(KeyCode.Space)) {
+            SwichMoveType(false);
+            _jumpPressed = true;
+        }
 
-			// составляем путь прямо, на следующий куб
-			switch (_gravityDirection)
-			{
-				case GravityDirection.DOWN:
-					dest = new Vector3(currentSurfacePosition.x + STEP, currentSurfacePosition.y , currentSurfacePosition.z);
-					break;
-				case GravityDirection.LEFT:
-					dest = new Vector3(currentSurfacePosition.x, currentSurfacePosition.y - STEP , currentSurfacePosition.z);
-					break;
-				case GravityDirection.UP:
-					dest = new Vector3(currentSurfacePosition.x-STEP, currentSurfacePosition.y, currentSurfacePosition.z);
-					break;
-				case GravityDirection.RIGHT:
-					dest = new Vector3(currentSurfacePosition.x, currentSurfacePosition.y+STEP, currentSurfacePosition.z);
-					break;
-				default:
-					throw new ArgumentOutOfRangeException();
-			}
 
-			// пытаемся перейти на следующий куб
-			if (_navMeshAgent.CalculatePath(dest, new NavMeshPath()))
-			{
-				_navMeshAgent.SetDestination(dest);
-			}
-			else
-			{
-				// переворачиваемся
-				GravityDirection nextGravityValue;
-				switch (_gravityDirection)
-				{
-					case GravityDirection.DOWN:
-						nextGravityValue = GravityDirection.LEFT;
-						dest = new Vector3(currentSurfacePosition.x + STEP/2, currentSurfacePosition.y - STEP/2, currentSurfacePosition.z);	
-						break;
-					case GravityDirection.LEFT:
-						nextGravityValue = GravityDirection.UP;
-						dest = new Vector3(currentSurfacePosition.x - STEP/2, currentSurfacePosition.y - STEP/2, currentSurfacePosition.z);	
-						break;
-					case GravityDirection.UP:
-						nextGravityValue = GravityDirection.RIGHT;
-						dest = new Vector3(currentSurfacePosition.x - STEP/2, currentSurfacePosition.y + STEP/2, currentSurfacePosition.z);	
-						break;
-					case GravityDirection.RIGHT:
-						nextGravityValue = GravityDirection.DOWN;
-						dest = new Vector3(currentSurfacePosition.x + STEP/2, currentSurfacePosition.y + STEP/2, currentSurfacePosition.z);	
-						break;
-					default:
-						throw new ArgumentOutOfRangeException();
-				}
-				_gravityDirection = nextGravityValue;
-//				dest = new Vector3(currentSurfacePosition.x + STEP/2, currentSurfacePosition.y - STEP/2-1, currentSurfacePosition.z);	
-//				dest = new Vector3(8.3f, -3, position.z);	
-				
-				 path = new NavMeshPath();
-				_navMeshAgent.CalculatePath(dest, path);
-				if (path.status != NavMeshPathStatus.PathInvalid) {
-					_navMeshAgent.SetDestination(dest);
-					Debug.Log("dest " + dest);
-					_isGo = true;
-				}
-//				if (_navMeshAgent.CalculatePath(dest, new NavMeshPath()))
-//				{
-//					_navMeshAgent.SetDestination(dest);
-//				}
-				
-				
-			}
+        // прыгаем
+        if (_characterController.enabled) {
+            if (_jumpPressed) {
+                _jumpPressed = false;
+                //Выставить высоту прыжка
+                switch (_gravityDirection) {
+                    case GravityDirection.DOWN:
+                        moveDirection.y = jumpHeight;
+                        break;
+                    case GravityDirection.UP:
+                        moveDirection.y = -jumpHeight;
+                        break;
+                    case GravityDirection.LEFT:
+                        moveDirection.x = jumpHeight;
+                        break;
+                    case GravityDirection.RIGHT:
+                        moveDirection.x = -jumpHeight;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
 
-		}
+            // Направление движения мяча в прыжке
+            switch (_gravityDirection) {
+                case GravityDirection.DOWN:
+                    moveDirection = new Vector3(Input.GetAxis("Horizontal") * runSpeed, moveDirection.y,
+                        0);
+                    moveDirection.y -= gravity;
+                    break;
+                case GravityDirection.LEFT:
+                    moveDirection = new Vector3(moveDirection.x, Input.GetAxis("Horizontal") * runSpeed,
+                        0);
+                    moveDirection.x -= gravity;
+                    break;
+                case GravityDirection.UP:
+                    moveDirection = new Vector3(Input.GetAxis("Horizontal") * runSpeed, moveDirection.y,
+                        0);
+                    moveDirection.y += gravity;
+                    break;
+                case GravityDirection.RIGHT:
+                    moveDirection = new Vector3(moveDirection.x, Input.GetAxis("Horizontal") * runSpeed,
+                        0);
+                    moveDirection.x += gravity;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
 
-		if (_isGo)
-		{
-			if (!_navMeshAgent.pathPending)
-			{
-				if (_navMeshAgent.remainingDistance <= _navMeshAgent.stoppingDistance)
-				{
-					if (!_navMeshAgent.hasPath || _navMeshAgent.velocity.sqrMagnitude == 0f)
-					{
-						_isGo = false;
-						Debug.Log("123");
-//						SwichMoveType(false);
-					}
-				}
-			}
-		}
+            CollisionFlags collisionFlags = _characterController.Move(moveDirection * Time.deltaTime);
 
-		if (_characterController.enabled)
-		{
-//			if (Input.GetKey(KeyCode.LeftShift))
-//				moveDirection = new Vector3(Input.GetAxis("Horizontal") * walkSpeed, moveDirection.y,
-//					Input.GetAxis("Vertical") * walkSpeed);
-//			else
-//			{
-//				moveDirection = new Vector3(Input.GetAxis("Horizontal") * runSpeed, moveDirection.y,
-//					Input.GetAxis("Vertical") * runSpeed);
+            if (collisionFlags != CollisionFlags.None) {
+                SwichMoveType(true);
+            }
+        }
+    }
 
-			switch (_gravityDirection)
-			{
-				case GravityDirection.DOWN:
-					moveDirection = new Vector3(Input.GetAxis("Horizontal") * runSpeed, moveDirection.y,
-						0);
-					moveDirection.y -= gravity;
-					break;
-				case GravityDirection.LEFT:
-					moveDirection = new Vector3(moveDirection.x, Input.GetAxis("Horizontal") * runSpeed,
-						0);
-					moveDirection.x -= gravity;
-					break;
-				case GravityDirection.UP:
-					moveDirection = new Vector3(Input.GetAxis("Horizontal") * runSpeed, moveDirection.y,
-						0);
-					moveDirection.y += gravity;
-					break;
-				case GravityDirection.RIGHT:
-					moveDirection = new Vector3(moveDirection.x,Input.GetAxis("Horizontal") * runSpeed,
-						0);
-					moveDirection.x += gravity;
-					break;
-				default:
-					throw new ArgumentOutOfRangeException();
-			}
-			
+    // переходим на правую плоскость куба
+    private Vector3 FindRightCubeSurface(Vector3 currentSurfacePosition) {
+        Vector3 forwardCube;
+        switch (_gravityDirection) {
+            case GravityDirection.DOWN:
+                forwardCube = new Vector3(currentSurfacePosition.x + STEP / 2, currentSurfacePosition.y - STEP / 2,
+                    currentSurfacePosition.z);
+                break;
+            case GravityDirection.LEFT:
+                forwardCube = new Vector3(currentSurfacePosition.x - STEP / 2, currentSurfacePosition.y - STEP / 2,
+                    currentSurfacePosition.z);
+                break;
+            case GravityDirection.UP:
+                forwardCube = new Vector3(currentSurfacePosition.x - STEP / 2, currentSurfacePosition.y + STEP / 2,
+                    currentSurfacePosition.z);
+                break;
+            case GravityDirection.RIGHT:
+                forwardCube = new Vector3(currentSurfacePosition.x + STEP / 2, currentSurfacePosition.y + STEP / 2,
+                    currentSurfacePosition.z);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
 
-//			}
+        return forwardCube;
+    }
 
-			CollisionFlags collisionFlags = _characterController.Move(moveDirection * Time.deltaTime);
-			Debug.Log("==+++==" + collisionFlags);
+    // Ищем позицию следующего куба
+    private Vector3 FindForwardCube(Vector3 currentSurfacePosition) {
+        Vector3 dest;
 
-			if (collisionFlags != CollisionFlags.None)
-			{
-				SwichMoveType(true);
-			}
-		}
+        // составляем путь прямо, на следующий куб
+        switch (_gravityDirection) {
+            case GravityDirection.DOWN:
+                dest = new Vector3(currentSurfacePosition.x + STEP, currentSurfacePosition.y,
+                    currentSurfacePosition.z);
+                break;
+            case GravityDirection.LEFT:
+                dest = new Vector3(currentSurfacePosition.x, currentSurfacePosition.y - STEP,
+                    currentSurfacePosition.z);
+                break;
+            case GravityDirection.UP:
+                dest = new Vector3(currentSurfacePosition.x - STEP, currentSurfacePosition.y,
+                    currentSurfacePosition.z);
+                break;
+            case GravityDirection.RIGHT:
+                dest = new Vector3(currentSurfacePosition.x, currentSurfacePosition.y + STEP,
+                    currentSurfacePosition.z);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
 
-	}
+        return dest;
+    }
 
-	void OnCollisionEnter(Collision collision)
-	{
-		// Debug-draw all contact points and normals
-		foreach (ContactPoint contact in collision.contacts)
-		{
-			Debug.DrawRay(contact.point, contact.normal, Color.white);
-			Debug.Log("111 "+ contact.otherCollider.gameObject.name);
-		}
-	}
-//	void OnControllerColliderHit(ControllerColliderHit hit) {
-//		Debug.Log(hit.gameObject) ;
-////		if (body == null || body.isKinematic)
-////			return;
-////        
-////		if (hit.moveDirection.y < -0.3F)
-////			return;
-////        
-////		Vector3 pushDir = new Vector3(hit.moveDirection.x, 0, hit.moveDirection.z);
-////		body.velocity = pushDir * pushPower;
-//	}
+    private void SwichMoveType(bool isAgent) {
+        if (_characterController != null) {
+            _characterController.enabled = !isAgent;
+        }
 
-	private void SwichMoveType(bool isAgent)
-	{
-		if (_characterController != null)
-		{
-			_characterController.enabled = !isAgent;			
-		}
-
-		if (_navMeshAgent != null)
-		{
-			_navMeshAgent.enabled = isAgent;
-		}
-
-	}
+        if (_navMeshAgent != null) {
+            _navMeshAgent.enabled = isAgent;
+        }
+    }
 }
