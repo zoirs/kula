@@ -9,6 +9,9 @@ public class SceneController : MonoBehaviour {
     private bool _one;
 
     void Start() {
+        
+        
+        //привет
 //        Vector3[] level = new Vector3[] {
 //            new Vector3(0, 0, 0),
 //            new Vector3(10, 0, 0),
