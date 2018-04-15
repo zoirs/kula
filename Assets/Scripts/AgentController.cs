@@ -5,13 +5,12 @@ using Object = UnityEngine.Object;
 
 public class AgentController : MonoBehaviour {
     Vector3 moveDirection = Vector3.zero;
-    float walkSpeed = 5.0f;
-    float runSpeed = 10.0f;
+    float runSpeed = 30.0f;
     float gravity = 1.0f;
     float jumpHeight = 15.0f;
     private CharacterController _characterController;
     private NavMeshAgent _navMeshAgent;
-    private const int STEP = 10;
+    private const int STEP = 5;
     private bool _jumpPressed = false;
     private float elapsed = 0.0f;
 
@@ -30,18 +29,29 @@ public class AgentController : MonoBehaviour {
         if (_navMeshAgent.enabled && Input.GetKeyDown(KeyCode.RightArrow)) {
             GameObject surface = ((Component) _navMeshAgent.navMeshOwner).gameObject;
 
+            Debug.Log("текущий куб "+ surface.name + " " + surface.transform.position);
             Vector3 nextForwardCube = FindForwardCube(surface.transform.position);
 
+            NavMeshPath navMeshPath = new NavMeshPath();
             // пытаемся перейти на следующий куб
-            if (_navMeshAgent.CalculatePath(nextForwardCube, new NavMeshPath())) {
+            bool path = _navMeshAgent.CalculatePath(nextForwardCube, navMeshPath);
+            bool calculatePath = path;
+
+            Debug.Log("расчет позиция     "+ nextForwardCube);
+
+            if (calculatePath) {
+                Debug.Log("Перезодим на след куб " + nextForwardCube);
                 _navMeshAgent.SetDestination(nextForwardCube);
             } else {
+
                 // переворачиваемся
                 Vector3 nextSurfaceCurrentCube = FindRightCubeSurface(surface.transform.position);
                 //todo менять направление гравитации в момент когда шарик на линке
                 _gravityDirection = _gravityDirection.Rigth();
+                Debug.Log("расчет позиция     "+ nextSurfaceCurrentCube);
 
                 if (_navMeshAgent.CalculatePath(nextSurfaceCurrentCube, new NavMeshPath())) {
+                    Debug.Log("Переходим на другую стороно текущего куба " +nextSurfaceCurrentCube);
                     _navMeshAgent.SetDestination(nextSurfaceCurrentCube);
                 }
             }
@@ -114,21 +124,23 @@ public class AgentController : MonoBehaviour {
     // переходим на правую плоскость куба
     private Vector3 FindRightCubeSurface(Vector3 currentSurfacePosition) {
         Vector3 forwardCube;
+        float halfStep = (float) STEP / 2;
         switch (_gravityDirection) {
             case GravityDirection.DOWN:
-                forwardCube = new Vector3(currentSurfacePosition.x + STEP / 2, currentSurfacePosition.y - STEP / 2,
+                //todo брать отстаток от деления на STEP|2
+                forwardCube = new Vector3(currentSurfacePosition.x + halfStep, currentSurfacePosition.y - halfStep,
                     currentSurfacePosition.z);
                 break;
             case GravityDirection.LEFT:
-                forwardCube = new Vector3(currentSurfacePosition.x - STEP / 2, currentSurfacePosition.y - STEP / 2,
+                forwardCube = new Vector3(currentSurfacePosition.x - halfStep, currentSurfacePosition.y - halfStep,
                     currentSurfacePosition.z);
                 break;
             case GravityDirection.UP:
-                forwardCube = new Vector3(currentSurfacePosition.x - STEP / 2, currentSurfacePosition.y + STEP / 2,
+                forwardCube = new Vector3(currentSurfacePosition.x - halfStep, currentSurfacePosition.y + halfStep,
                     currentSurfacePosition.z);
                 break;
             case GravityDirection.RIGHT:
-                forwardCube = new Vector3(currentSurfacePosition.x + STEP / 2, currentSurfacePosition.y + STEP / 2,
+                forwardCube = new Vector3(currentSurfacePosition.x + halfStep, currentSurfacePosition.y + halfStep,
                     currentSurfacePosition.z);
                 break;
             default:

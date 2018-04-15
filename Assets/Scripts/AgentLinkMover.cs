@@ -27,7 +27,8 @@ public class AgentLinkMover : MonoBehaviour {
 
     IEnumerator NormalSpeed(NavMeshAgent agent) {
         OffMeshLinkData data = agent.currentOffMeshLinkData;
-        Vector3 endPos = data.endPos + Vector3.up * agent.baseOffset;
+//        Vector3 endPos = data.endPos + Vector3.up * agent.baseOffset;
+        Vector3 endPos = data.endPos + Vector3.up; //todo отсутп в размер половину сферы
         FlyCamera flyCamera = Camera.main.GetComponent<FlyCamera>();
         if (flyCamera != null) {
             flyCamera.Rotate(_agentController._gravityDirection);
