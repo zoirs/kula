@@ -4,8 +4,9 @@ using UnityEngine.AI;
 using Object = UnityEngine.Object;
 
 public class AgentController : MonoBehaviour {
+    private SceneController _sceneController;
     Vector3 moveDirection = Vector3.zero;
-    float runSpeed = 30.0f;
+    float runSpeed;
     float gravity = 1.0f;
     float jumpHeight = 15.0f;
     private CharacterController _characterController;
@@ -13,13 +14,19 @@ public class AgentController : MonoBehaviour {
     private const int STEP = 5;
     private bool _jumpPressed = false;
     private float elapsed = 0.0f;
+    private float _rebroSize;
 
-    public GravityDirection _gravityDirection = GravityDirection.DOWN;
 
     void Start() {
+        _sceneController = GameObject.Find("Scene").GetComponent<SceneController>();
+
+        if (_sceneController == null) {
+            Debug.LogWarning("Scene is null");
+        }
+
         _characterController = gameObject.GetComponent<CharacterController>();
         _navMeshAgent = gameObject.GetComponent<NavMeshAgent>();
-
+        runSpeed = _navMeshAgent.speed;
         SwichMoveType(true);
     }
 
@@ -28,33 +35,10 @@ public class AgentController : MonoBehaviour {
         // двигаемся по плоскости
         if (_navMeshAgent.enabled && Input.GetKeyDown(KeyCode.RightArrow)) {
             GameObject surface = ((Component) _navMeshAgent.navMeshOwner).gameObject;
-
-            Debug.Log("текущий куб "+ surface.name + " " + surface.transform.position);
-            Vector3 nextForwardCube = FindForwardCube(surface.transform.position);
-
-            NavMeshPath navMeshPath = new NavMeshPath();
-            // пытаемся перейти на следующий куб
-            bool path = _navMeshAgent.CalculatePath(nextForwardCube, navMeshPath);
-            bool calculatePath = path;
-
-            Debug.Log("расчет позиция     "+ nextForwardCube);
-
-            if (calculatePath) {
-                Debug.Log("Перезодим на след куб " + nextForwardCube);
-                _navMeshAgent.SetDestination(nextForwardCube);
-            } else {
-
-                // переворачиваемся
-                Vector3 nextSurfaceCurrentCube = FindRightCubeSurface(surface.transform.position);
-                //todo менять направление гравитации в момент когда шарик на линке
-                _gravityDirection = _gravityDirection.Rigth();
-                Debug.Log("расчет позиция     "+ nextSurfaceCurrentCube);
-
-                if (_navMeshAgent.CalculatePath(nextSurfaceCurrentCube, new NavMeshPath())) {
-                    Debug.Log("Переходим на другую стороно текущего куба " +nextSurfaceCurrentCube);
-                    _navMeshAgent.SetDestination(nextSurfaceCurrentCube);
-                }
-            }
+            CubeController cube = surface.GetComponentInParent<CubeController>();
+            Vector3 nextDestination = FindNextDestination(cube.Position);
+    
+            _navMeshAgent.SetDestination(nextDestination);
         }
 
         // Стартуем прыжок
@@ -69,7 +53,7 @@ public class AgentController : MonoBehaviour {
             if (_jumpPressed) {
                 _jumpPressed = false;
                 //Выставить высоту прыжка
-                switch (_gravityDirection) {
+                switch (_sceneController.GravityDirection) {
                     case GravityDirection.DOWN:
                         moveDirection.y = jumpHeight;
                         break;
@@ -88,9 +72,9 @@ public class AgentController : MonoBehaviour {
             }
 
             // Направление движения мяча в прыжке
-            switch (_gravityDirection) {
+            switch (_sceneController.GravityDirection) {
                 case GravityDirection.DOWN:
-                    moveDirection = new Vector3(Input.GetAxis("Horizontal") * runSpeed, moveDirection.y,
+                    moveDirection = new Vector3(0.5f * runSpeed, moveDirection.y,
                         0);
                     moveDirection.y -= gravity;
                     break;
@@ -115,68 +99,52 @@ public class AgentController : MonoBehaviour {
 
             CollisionFlags collisionFlags = _characterController.Move(moveDirection * Time.deltaTime);
 
-            if (collisionFlags != CollisionFlags.None) {
+            if (CheckCollision(collisionFlags)) {
                 SwichMoveType(true);
             }
         }
     }
 
-    // переходим на правую плоскость куба
-    private Vector3 FindRightCubeSurface(Vector3 currentSurfacePosition) {
-        Vector3 forwardCube;
-        float halfStep = (float) STEP / 2;
-        switch (_gravityDirection) {
-            case GravityDirection.DOWN:
-                //todo брать отстаток от деления на STEP|2
-                forwardCube = new Vector3(currentSurfacePosition.x + halfStep, currentSurfacePosition.y - halfStep,
-                    currentSurfacePosition.z);
-                break;
-            case GravityDirection.LEFT:
-                forwardCube = new Vector3(currentSurfacePosition.x - halfStep, currentSurfacePosition.y - halfStep,
-                    currentSurfacePosition.z);
-                break;
-            case GravityDirection.UP:
-                forwardCube = new Vector3(currentSurfacePosition.x - halfStep, currentSurfacePosition.y + halfStep,
-                    currentSurfacePosition.z);
-                break;
-            case GravityDirection.RIGHT:
-                forwardCube = new Vector3(currentSurfacePosition.x + halfStep, currentSurfacePosition.y + halfStep,
-                    currentSurfacePosition.z);
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
-
-        return forwardCube;
+    private bool CheckCollision(CollisionFlags collisionFlags) {
+        return collisionFlags == CollisionFlags.CollidedBelow && _sceneController.GravityDirection == GravityDirection.DOWN || 
+               collisionFlags == CollisionFlags.CollidedAbove && _sceneController.GravityDirection == GravityDirection.UP || 
+               collisionFlags == CollisionFlags.CollidedSides && (_sceneController.GravityDirection == GravityDirection.LEFT ||_sceneController.GravityDirection== GravityDirection.RIGHT );
     }
+    
+    // ищем на какой куб можно перейти
+    private Vector3 FindNextDestination(Vector3 currentCubePosition) {
+        _rebroSize = 2.5f;
 
-    // Ищем позицию следующего куба
-    private Vector3 FindForwardCube(Vector3 currentSurfacePosition) {
-        Vector3 dest;
+        //Позиция мячика на кубе
+        Vector3 ballPos = _rebroSize * _sceneController.GravityDirection.GetOppositeVector();
+        //Вектор из центра куба в сторону направления движения
+        Vector3 balRight = _rebroSize * _sceneController.GravityDirection.GetRigthVector();
+        //Координаты края куба, по направлению движения
+        Vector3 edgePos = ballPos + balRight;
 
-        // составляем путь прямо, на следующий куб
-        switch (_gravityDirection) {
-            case GravityDirection.DOWN:
-                dest = new Vector3(currentSurfacePosition.x + STEP, currentSurfacePosition.y,
-                    currentSurfacePosition.z);
-                break;
-            case GravityDirection.LEFT:
-                dest = new Vector3(currentSurfacePosition.x, currentSurfacePosition.y - STEP,
-                    currentSurfacePosition.z);
-                break;
-            case GravityDirection.UP:
-                dest = new Vector3(currentSurfacePosition.x - STEP, currentSurfacePosition.y,
-                    currentSurfacePosition.z);
-                break;
-            case GravityDirection.RIGHT:
-                dest = new Vector3(currentSurfacePosition.x, currentSurfacePosition.y + STEP,
-                    currentSurfacePosition.z);
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
+        Vector3 up = edgePos + _rebroSize * _sceneController.GravityDirection.GetUpVector();
+        Vector3 forward = edgePos + _rebroSize * _sceneController.GravityDirection.GetRigthVector();
+        Vector3 down = edgePos + _rebroSize * _sceneController.GravityDirection.GetDownVector();
+
+        if (_navMeshAgent.CalculatePath(currentCubePosition + up, new NavMeshPath())) {
+            Debug.Log("up1 " + up);
+            _sceneController.ChangeGravityRigth(Direction.UP);
+            return currentCubePosition + up;
         }
 
-        return dest;
+        if (_navMeshAgent.CalculatePath(currentCubePosition + forward, new NavMeshPath())) {
+            Debug.Log("fr1 " + forward);
+            return currentCubePosition + forward;
+        }
+
+        if (_navMeshAgent.CalculatePath(currentCubePosition + down, new NavMeshPath())) {
+            Debug.Log("dn1 " + down );
+            _sceneController.ChangeGravityRigth(Direction.DOWN);
+            return currentCubePosition + down;
+        }
+
+        return currentCubePosition + ballPos;
+//      Vector3 up = Quaternion.Euler(0, 0, _sceneController.GravityDirection.MRigth(Direction.UP)) * size;
     }
 
     private void SwichMoveType(bool isAgent) {

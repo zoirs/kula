@@ -6,9 +6,16 @@ using UnityEngine.AI;
 [RequireComponent(typeof(NavMeshAgent))]
 public class AgentLinkMover : MonoBehaviour {
     public OffMeshLinkMoveMethod method = OffMeshLinkMoveMethod.Teleport;
+    private SceneController _scene;
     private AgentController _agentController;
 
     IEnumerator Start() {
+        _scene = GameObject.Find("Scene").GetComponent<SceneController>();
+
+        if (_scene == null) {
+            Debug.LogWarning("Scene is null");
+        }
+
         NavMeshAgent agent = GetComponent<NavMeshAgent>();
         _agentController = GetComponent<AgentController>();
         agent.autoTraverseOffMeshLink = false;
@@ -17,7 +24,7 @@ public class AgentLinkMover : MonoBehaviour {
                 if (method == OffMeshLinkMoveMethod.NormalSpeed) {
                     yield return StartCoroutine(NormalSpeed(agent));
                 } else if (method == OffMeshLinkMoveMethod.Parabola) {
-                    yield return StartCoroutine(Parabola(agent, 2.0f, 0.5f));
+//                    yield return StartCoroutine(Parabola(agent, 2.0f, 0.5f));
                 }
                 agent.CompleteOffMeshLink();
             }
@@ -27,16 +34,15 @@ public class AgentLinkMover : MonoBehaviour {
 
     IEnumerator NormalSpeed(NavMeshAgent agent) {
         OffMeshLinkData data = agent.currentOffMeshLinkData;
-//        Vector3 endPos = data.endPos + Vector3.up * agent.baseOffset;
-        Vector3 endPos = data.endPos + Vector3.up; //todo отсутп в размер половину сферы
+        Vector3 endPos = data.endPos;// + _scene.GravityDirection.GetOppositeVector() * agent.baseOffset;
         FlyCamera flyCamera = Camera.main.GetComponent<FlyCamera>();
         if (flyCamera != null) {
-            flyCamera.Rotate(_agentController._gravityDirection);
+            flyCamera.Rotate(_scene.GravityDirection);
         }
 
         while (agent.transform.position != endPos) {
-            agent.transform.position =
-                Vector3.MoveTowards(agent.transform.position, endPos, agent.speed * Time.deltaTime);
+            Vector3 position = agent.transform.position ;
+            agent.transform.position = Vector3.MoveTowards(position, endPos, agent.speed * Time.deltaTime);
             yield return null;
         }
     }
