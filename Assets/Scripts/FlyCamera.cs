@@ -16,23 +16,23 @@ public class FlyCamera : MonoBehaviour {
         originalRotation = transform.rotation;
     }
 
-    public void Rotate(GravityDirection gravityDirection) {
-        switch (gravityDirection) {
-            case GravityDirection.DOWN:
-                EndrotationZ = 0f;
-                break;
-            case GravityDirection.LEFT:
-                EndrotationZ = 90f;
-                break;
-            case GravityDirection.UP:
-                EndrotationZ = 180f;
-                break;
-            case GravityDirection.RIGHT:
-                EndrotationZ = 270f;
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
+    public void Rotate(Direction gravityDirection) {
+//        switch (gravityDirection) {
+//            case GravityDirection.DOWN:
+//                EndrotationZ = 0f;
+//                break;
+//            case GravityDirection.LEFT:
+//                EndrotationZ = 90f;
+//                break;
+//            case GravityDirection.UP:
+//                EndrotationZ = 180f;
+//                break;
+//            case GravityDirection.RIGHT:
+//                EndrotationZ = 270f;
+//                break;
+//            default:
+//                throw new ArgumentOutOfRangeException();
+//        }
     }
 
     void Update() {

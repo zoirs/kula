@@ -8,7 +8,7 @@ public class SceneController : MonoBehaviour {
     private GameObject cube;
     private bool _one;
 
-    private GravityDirection _gravityDirection = GravityDirection.DOWN;
+    private Direction _gravityDirection = Direction.DOWN;
 
     void Start() {
         
@@ -31,12 +31,16 @@ public class SceneController : MonoBehaviour {
 //        }
     }
 
-    public GravityDirection GravityDirection {
+    public Direction GravityDirection {
         get { return _gravityDirection; }
     }
     
     //todo наверное, нужно в качестве парамтера передавать параметр "по часовй стрелки" или "против часовой стрелки" меняем направление движения
-    public void ChangeGravityRigth(Direction moveDirection) {
-        _gravityDirection = _gravityDirection.Rigth(moveDirection);
+    public void ChangeGravityClockwise() {
+        _gravityDirection = _gravityDirection.GetNextClockwise();
+    }
+    
+    public void ChangeGravityCounterClockwise() {
+        _gravityDirection = _gravityDirection.GetCounterClockwise();
     }
 }
