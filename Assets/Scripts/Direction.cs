@@ -125,6 +125,22 @@ static class GravityDirectionExtention {
                 throw new ArgumentOutOfRangeException("direction", direction, null);
         }
     }
+    
+    
+    public static float GetAngel(this Direction gravityDirection) {
+        switch (gravityDirection) {
+            case Direction.DOWN:
+                return 0f;
+            case Direction.LEFT:
+                return  90f;
+            case Direction.UP:
+                return 180f;
+            case Direction.RIGHT:
+                return 270f;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
 
     public static Vector3 GetDownVector(this Direction direction) {
         return GetVector(direction);

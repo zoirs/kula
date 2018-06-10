@@ -1,32 +1,25 @@
-﻿using System;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.AI;
-using Object = UnityEngine.Object;
 
 public class AgentController : MonoBehaviour {
     private SceneController _sceneController;
-    Vector3 moveDirection = Vector3.zero;
-    float runSpeed;
     float gravity = 1.0f;
     float jumpHeight = 15.0f;
     private CharacterController _characterController;
     private NavMeshAgent _navMeshAgent;
-    private const int STEP = 5;
     private bool _jumpPressed = false;
-    private float elapsed = 0.0f;
     private float _rebroSize;
 
 
     void Start() {
         _sceneController = GameObject.Find("Scene").GetComponent<SceneController>();
-
+            
         if (_sceneController == null) {
             Debug.LogWarning("Scene is null");
         }
 
         _characterController = gameObject.GetComponent<CharacterController>();
         _navMeshAgent = gameObject.GetComponent<NavMeshAgent>();
-        runSpeed = _navMeshAgent.speed;
         SwichMoveType(true);
     }
 
@@ -44,67 +37,22 @@ public class AgentController : MonoBehaviour {
         // Стартуем прыжок
         if (_navMeshAgent.enabled && Input.GetKey(KeyCode.Space)) {
             SwichMoveType(false);
-            _jumpPressed = true;
         }
 
 
         // прыгаем
         if (_characterController.enabled) {
-            if (_jumpPressed) {
-                _jumpPressed = false;
-                //Выставить высоту прыжка
-                switch (_sceneController.GravityDirection) {
-                    case Direction.DOWN:
-                        moveDirection.y = jumpHeight;
-                        break;
-                    case Direction.UP:
-                        moveDirection.y = -jumpHeight;
-                        break;
-                    case Direction.LEFT:
-                        moveDirection.x = jumpHeight;
-                        break;
-                    case Direction.RIGHT:
-                        moveDirection.x = -jumpHeight;
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-            }
 
-            // Направление движения мяча в прыжке
-            switch (_sceneController.GravityDirection) {
-                case Direction.DOWN:
-                    moveDirection = new Vector3(0.5f * runSpeed, moveDirection.y,
-                        0);
-                    moveDirection.y -= gravity;
-                    break;
-                case Direction.LEFT:
-                    moveDirection = new Vector3(moveDirection.x, Input.GetAxis("Horizontal") * runSpeed,
-                        0);
-                    moveDirection.x -= gravity;
-                    break;
-                case Direction.UP:
-                    moveDirection = new Vector3(Input.GetAxis("Horizontal") * runSpeed, moveDirection.y,
-                        0);
-                    moveDirection.y += gravity;
-                    break;
-                case Direction.RIGHT:
-                    moveDirection = new Vector3(moveDirection.x, Input.GetAxis("Horizontal") * runSpeed,
-                        0);
-                    moveDirection.x += gravity;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-
-            CollisionFlags collisionFlags = _characterController.Move(moveDirection * Time.deltaTime);
+            CollisionFlags collisionFlags = _characterController.Move(_navMeshAgent.speed * _sceneController.GravityDirection.GetOppositeVector() * Time.deltaTime);
 
             if (CheckCollision(collisionFlags)) {
+                _sceneController.ChangeGravityClockwise();                
+                _sceneController.ChangeGravityClockwise();                
                 SwichMoveType(true);
             }
         }
     }
-
+    
     private bool CheckCollision(CollisionFlags collisionFlags) {
         return collisionFlags == CollisionFlags.CollidedBelow && _sceneController.GravityDirection == Direction.DOWN || 
                collisionFlags == CollisionFlags.CollidedAbove && _sceneController.GravityDirection == Direction.UP || 
