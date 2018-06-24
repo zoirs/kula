@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using UnityEngine;
 using UnityEngine.AI;
 
 public class AgentController : MonoBehaviour {
@@ -116,5 +117,28 @@ public class AgentController : MonoBehaviour {
         if (_navMeshAgent != null) {
             _navMeshAgent.enabled = isAgent;
         }
+
+        if (!isAgent) {
+            StartCoroutine(CheckFly());
+        }
+    }
+
+    // После старта полета, проверяем приземлился ли или нет
+    private IEnumerator CheckFly() {
+        yield return new WaitForSeconds(3);
+
+        // если через 3 сек не приземлился, то умираем
+        if (!_navMeshAgent.enabled) {
+            _sceneController.ResetLevel();            
+        }
+    }
+
+    void OnTriggerEnter(Collider a)
+    {
+        if (a.name.Contains("Finish")) {
+            _sceneController.LoadNextLevel();
+        }
+
+
     }
 }
